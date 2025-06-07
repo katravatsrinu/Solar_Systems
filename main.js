@@ -83,8 +83,6 @@ const planetData = [
         speed: 0.18,
         texture: null
     }
-
-
 ]
 
 
