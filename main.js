@@ -1,89 +1,120 @@
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(
-    75, window.innerWidth / window.innerHeight,
-    0.1,
-    1000
+    75, 
+    window.innerWidth / window.innerHeight, 
+    0.1, 
+    1000 
 );
 
-const renderer = new THREE.WebGLRenderer({
-    antialias: true,
-    alpha: true
+const renderer = new THREE.WebGLRenderer({ 
+    antialias: true, 
+    alpha: true 
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true; 
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+
+document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+
+const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+scene.add(ambientLight);
+
+function createStarField() {
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 2000;
+    const positions = new Float32Array(starCount * 3);
+    
+    // Generate random star positions
+    for (let i = 0; i < starCount * 3; i += 3) {
+        positions[i] = (Math.random() - 0.5) * 2000; // x
+        positions[i + 1] = (Math.random() - 0.5) * 2000; // y
+        positions[i + 2] = (Math.random() - 0.5) * 2000; // z
+    }
+    
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+    const starMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 2,
+        transparent: true,
+        opacity: 0.8
+    });
+    
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    scene.add(stars);
+    return stars;
+}
+
+const stars = createStarField();
+
+let mouseDown = false;
+let mouseX = 0;
+let mouseY = 0;
+let cameraAngle = { x: 0, y: 0 };
+let cameraDistance = 100;
+
+// Set initial camera position
+camera.position.set(0, 0, cameraDistance);
+camera.lookAt(0, 0, 0);
+
+// Mouse event handlers for camera control
+renderer.domElement.addEventListener('mousedown', (e) => {
+    mouseDown = true;
+    mouseX = e.clientX;
+    mouseY = e.clientY;
 });
 
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.domElement.addEventListener('mouseup', () => {
+    mouseDown = false;
+});
+
+renderer.domElement.addEventListener('mousemove', (e) => {
+    if (!mouseDown) return;
+    
+    const deltaX = e.clientX - mouseX;
+    const deltaY = e.clientY - mouseY;
+    
+    cameraAngle.y += deltaX * 0.01;
+    cameraAngle.x += deltaY * 0.01;
+    
+    cameraAngle.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraAngle.x));
+    
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+});
+
+renderer.domElement.addEventListener('wheel', (e) => {
+    cameraDistance += e.deltaY * 0.1;
+    cameraDistance = Math.max(50, Math.min(500, cameraDistance));
+});
+
+function updateCamera() {
+    camera.position.x = Math.cos(cameraAngle.y) * Math.cos(cameraAngle.x) * cameraDistance;
+    camera.position.y = Math.sin(cameraAngle.x) * cameraDistance;
+    camera.position.z = Math.sin(cameraAngle.y) * Math.cos(cameraAngle.x) * cameraDistance;
+    camera.lookAt(0, 0, 0);
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    stars.rotation.x += 0.0001;
+    stars.rotation.y += 0.0002;
+    
+    updateCamera();
+    
+    renderer.render(scene, camera);
+}
 
 
+function handleResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
 
-// Plnet Data
+window.addEventListener('resize', handleResize);
 
-const planetData = [
-    {
-        name: 'mercury',
-        size: 0.8,
-        distance: 8,
-        color: 0x8C7853,
-        speed: 1.59,
-        texture: null
-    },
-    {
-        name: 'venus',
-        size: 1.2,
-        distance: 12,
-        color: 0xFFC649,
-        speed: 1.18,
-        texture: null
-    },
-    {
-
-        name: 'earth',
-        size: 1.3,
-        distance: 16,
-        color: 0x6B93D6,
-        speed: 1.0, // Earth is our baseline
-        texture: null
-    }, {
-        name: 'mars',
-        size: 1.0,
-        distance: 20,
-        color: 0xC1440E,
-        speed: 0.81,
-        texture: null
-    }, {
-        name: 'jupiter',
-        size: 3.5,
-        distance: 28,
-        color: 0xD8CA9D,
-        speed: 0.44,
-        texture: null
-    },
-    {
-        name: 'saturn',
-        size: 3.0,
-        distance: 38,
-        color: 0xFAD5A5,
-        speed: 0.32,
-        texture: null
-    },
-    {
-        name: 'uranus',
-        size: 2.2,
-        distance: 48,
-        color: 0x4FD0E7,
-        speed: 0.23,
-        texture: null
-    },
-    {
-        name: 'neptune',
-        size: 2.1,
-        distance: 58,
-        color: 0x4B70DD,
-        speed: 0.18,
-        texture: null
-    }
-]
-
-
-
+animate();
